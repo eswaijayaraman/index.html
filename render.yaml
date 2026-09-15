@@ -1,0 +1,26 @@
+# render.yaml — Blueprint for deploying classroom_math_panel.html on Render
+# Docs: https://render.com/docs/blueprint-spec
+#
+# NOTE: This is ONE static site. The file contains a home launcher + 4 in-page
+# "apps" (quiz, tables, factors, puzzles) that are shown/hidden via JS —
+# they all live in the same HTML file, so this only needs a single service.
+#
+# HOW TO USE:
+# 1. Put this file in the ROOT of your GitHub repo.
+# 2. Rename classroom_math_panel.html to index.html (Render serves index.html
+#    by default at the site's root URL) OR add a rewrite rule (see below).
+# 3. In Render dashboard: New + -> Blueprint -> connect your repo.
+# 4. Push to your connected branch to auto-deploy.
+
+services:
+  - type: web
+    name: classroom-math-panel
+    runtime: static
+    rootDir: .                     # repo root — change if the file lives in a subfolder
+    staticPublishPath: .           # serves files directly, no build step needed
+    routes:
+      # Serves classroom_math_panel.html when someone visits the root URL "/"
+      # Remove this route if you renamed the file to index.html instead.
+      - type: rewrite
+        source: /
+        destination: /classroom_math_panel.html
