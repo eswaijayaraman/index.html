@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Comprehension App - Final Version</title>
+
+<style>
+body { font-family: Arial; padding: 20px; }
+
+#passage {
+    border: 1px solid #ccc;
+    padding: 15px;
+    margin-top: 10px;
+}
+
+button {
+    padding: 10px;
+    margin: 5px;
+}
+
+#status {
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>📘 Comprehension App (Final System)</h2>
+
+<p><b>Note:</b> Your responses will be recorded for assessment and feedback.</p>
+
+Student Name: <input id="studentName"><br><br>
+
+<input type="file" id="fileInput" accept=".txt"><br><br>
+
+<div id="status">Status: Waiting for file</div>
+
+<div id="passage"></div>
+
+<button id="startBtn">Start Reading</button>
+<button id="finishBtn">Reading Over</button>
+
+<div id="questions"></div>
+
+<script>
+
+let textData = "";
+let keyword = "";
+let startTime = 0;
+
+// ---------------- VOICE ----------------
+function speak(text){
+    try{
+        window.speechSynthesis.cancel();
+        let msg = new SpeechSynthesisUtterance(text);
+        speechSynthesis.speak(msg);
+    } catch(e){}
+}
+
+// ---------------- FILE LOAD ----------------
+document.getElementById("fileInput").addEventListener("change", function(e){
+
+    let file = e.target.files[0];
+    if(!file){
+        alert("Please select a file");
+        return;
+    }
+
+    let reader = new FileReader();
+
+    reader.onload = function(event){
+        init(event.target.result);
+    };
+
+    reader.readAsText(file);
+});
+
+// ---------------- INIT ----------------
+function init(text){
+
+    textData = text;
+
+    let words = text.toLowerCase().match(/\b[a-z]{4,}\b/g) || [];
+    keyword = words.length > 0 ? words[0] : "concept";
+
+    document.getElementById("passage").innerHTML =
+        "<h3>" + keyword.toUpperCase() + "</h3><br>" +
+        text.replace(/\n/g,"<br>");
+
+    setStatus("File Loaded");
+
+    speak("Start reading");
+}
+
+// ---------------- BUTTON EVENTS ----------------
+document.getElementById("startBtn").addEventListener("click", function(){
+    startTime = Date.now();
+    setStatus("Reading Started");
+    speak("Reading started");
+});
+
+document.getElementById("finishBtn").addEventListener("click", function(){
+
+    if(startTime === 0){
+        alert("Click Start Reading first");
+        return;
+    }
+
+    showQuestions();
+    speak("Answer the questions");
+});
+
+// ---------------- QUESTIONS ----------------
+function showQuestions(){
+
+    document.getElementById("questions").innerHTML = `
+    <h3>Questions</h3>
+
+    1. What is the central idea of the passage?<br>
+    <input id="q1"><br><br>
+
+    2. Explain the passage clearly in your own words.<br>
+    <input id="q2"><br><br>
+
+    3. Identify a noun (Hint: ${keyword})<br>
+    <input id="q3"><br><br>
+
+    4. Frame a meaningful sentence using the keyword: <b>${keyword}</b><br>
+    <input id="q4"><br><br>
+
+    5. What is the tone? (positive / negative / argumentative / assertive)<br>
+    <input id="q5"><br><br>
+
+    <button id="submitBtn">Submit</button>
+    `;
+
+    document.getElementById("submitBtn").addEventListener("click", safeSubmit);
+}
+
+// ---------------- SAFE SUBMIT ----------------
+function safeSubmit(){
+    try{
+        evaluate();
+    } catch(error){
+        alert("Error: " + error.message);
+    }
+}
+
+// ---------------- EVALUATION ----------------
+function evaluate(){
+
+    let name = document.getElementById("studentName").value || "Unknown";
+
+    let q1 = getVal("q1");
+    let q2 = getVal("q2");
+    let q3 = getVal("q3");
+    let q4 = getVal("q4");
+    let q5 = getVal("q5");
+
+    let score = 0;
+
+    if(q1.length > 5) score++;
+    if(q2.length > 5) score++;
+    if(q3.includes(keyword)) score++;
+    if(q4.includes(keyword)) score++;
+
+    let tone = detectTone(textData);
+    if(q5 === tone) score++;
+
+    let result =
+        score >= 4 ? "Excellent" :
+        score >= 3 ? "Good" :
+        "Needs improvement";
+
+    let time = (Date.now() - startTime)/1000;
+    let wpm = Math.round((textData.split(/\s+/).length / time)*60);
+
+    document.getElementById("questions").innerHTML +=
+        `<h3>Score: ${score}/5</h3><p>${result}</p>`;
+
+    setStatus("Assessment Completed");
+
+    speak("Assessment complete. " + result);
+
+    // ✅ SEND DATA TO GOOGLE SHEET
+    sendToGoogleForm({
+        name, q1, q2, q3, q4, q5,
+        score, feedback: result,
+        wpm,
+        date: new Date().toLocaleString()
+    });
+}
+
+// ---------------- GOOGLE SHEET ----------------
+function sendToGoogleForm(data){
+
+    let url = "https://script.google.com/macros/s/AKfycbwJAONhBiERRMdyEWJK30Eg47VDAXMYXUQJ_0DWpFphpp3T5Qov7xRiJUTa_H4X7tI2/exec";
+
+    fetch(url, {
+        method: "POST",
+        body: JSON.stringify(data),
+        headers: {
+            "Content-Type": "application/json"
+        }
+    });
+}
+
+// ---------------- HELPERS ----------------
+function getVal(id){
+    let el = document.getElementById(id);
+    return el ? el.value.toLowerCase() : "";
+}
+
+function detectTone(text){
+
+    text = text.toLowerCase();
+
+    if(text.includes("should") || text.includes("must")) return "argumentative";
+    if(text.includes("bad")) return "negative";
+    if(text.includes("good")) return "positive";
+
+    return "assertive";
+}
+
+function setStatus(msg){
+    document.getElementById("status").innerText = "Status: " + msg;
+}
+
+</script>
+
+</body>
+</html>
