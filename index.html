@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Math Panel</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1b3a2f">
+
+<link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+<style>
+  :root{
+    --chalk-bg: #16302a;
+    --chalk-bg-2: #1e3f36;
+    --chalk-line: rgba(255,255,255,0.25);
+    --chalk-white: #f4f1ea;
+    --chalk-yellow: #ffd966;
+    --chalk-blue: #8fd0e8;
+    --chalk-pink: #f4a6c1;
+    --chalk-orange: #f2b880;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body{
+    margin:0;
+    background: var(--chalk-bg);
+    background-image:
+      radial-gradient(circle at 15% 20%, rgba(255,255,255,0.04) 0, transparent 45%),
+      radial-gradient(circle at 85% 80%, rgba(255,255,255,0.03) 0, transparent 40%);
+    color: var(--chalk-white);
+    font-family: 'Nunito', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+  .chalk-font{ font-family: 'Patrick Hand', cursive; }
+
+  /* ===== Screen switching ===== */
+  .screen{ display:none; min-height:100vh; }
+  .screen.active{ display:block; }
+
+  /* ===== Home launcher ===== */
+  #home-header{
+    text-align:center;
+    padding: 36px 20px 10px;
+  }
+  #home-header h1{
+    font-size: 44px;
+    letter-spacing: 0.5px;
+    margin:0;
+  }
+  #home-header p{
+    color: rgba(244,241,234,0.65);
+    margin-top:6px;
+    font-size:16px;
+  }
+  .tile-grid{
+    display:grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap:22px;
+    max-width: 820px;
+    margin: 30px auto 60px;
+    padding: 0 24px;
+  }
+  @media (max-width: 640px){
+    .tile-grid{ grid-template-columns: 1fr; }
+    #home-header h1{ font-size:34px; }
+  }
+  .tile{
+    background: var(--chalk-bg-2);
+    border: 2px dashed var(--chalk-line);
+    border-radius: 18px;
+    padding: 28px 22px;
+    text-align:left;
+    cursor:pointer;
+    transition: transform .15s ease, background .15s ease;
+    -webkit-user-select:none; user-select:none;
+    display:flex;
+    flex-direction:column;
+    gap: 10px;
+    min-height: 168px;
+  }
+  .tile:active{ transform: scale(0.97); }
+  .tile:hover{ background:#25493d; }
+  .tile .tile-icon{ font-size:40px; line-height:1; }
+  .tile .tile-title{ font-size:26px; }
+  .tile .tile-desc{ font-size:14px; color: rgba(244,241,234,0.7); line-height:1.4; }
+  .tile.t-quiz{ border-color: var(--chalk-yellow); }
+  .tile.t-tables{ border-color: var(--chalk-blue); }
+  .tile.t-factors{ border-color: var(--chalk-pink); }
+  .tile.t-puzzles{ border-color: var(--chalk-orange); }
+  .tile.t-quiz .tile-title{ color: var(--chalk-yellow); }
+  .tile.t-tables .tile-title{ color: var(--chalk-blue); }
+  .tile.t-factors .tile-title{ color: var(--chalk-pink); }
+  .tile.t-puzzles .tile-title{ color: var(--chalk-orange); }
+
+  /* ===== Shared top bar inside each app ===== */
+  .app-topbar{
+    display:flex; align-items:center; gap:14px;
+    padding: 14px 18px;
+    background: rgba(0,0,0,0.15);
+    position:sticky; top:0; z-index:40;
+  }
+  .back-btn{
+    background: var(--chalk-white);
+    color: var(--chalk-bg);
+    border:none; border-radius: 10px;
+    padding: 8px 16px;
+    font-weight:800; font-size:15px;
+    cursor:pointer;
+  }
+  .app-topbar .app-name{ font-size:20px; opacity:.9; }
+
+  /* ================= QUIZ APP (scoped) ================= */
+  #screen-quiz{ background:#f0f8ff; color:#222; }
+  #screen-quiz .app-topbar{ background:#dceeff; }
+  #screen-quiz h1{ color:#333; text-align:center; }
+  #screen-quiz .question{ font-size:24px; margin:20px 0; text-align:center; }
+  #screen-quiz .choices{ text-align:center; }
+  #screen-quiz .choices button{
+    display:block; margin:10px auto; padding:12px 20px;
+    font-size:18px; border:none; border-radius:8px;
+    background:#4caf50; color:white; cursor:pointer; width:260px; max-width:80%;
+  }
+  #screen-quiz .choices button:hover{ background:#45a049; }
+  #screen-quiz .result{ font-size:20px; margin:15px 0; font-weight:bold; text-align:center; }
+  #screen-quiz .score, #screen-quiz .counter{ font-size:18px; margin-top:15px; text-align:center; }
+  #screen-quiz .end-message{ font-size:22px; margin-top:20px; color:darkblue; font-weight:bold; text-align:center; }
+  #screen-quiz .setup{ margin:20px; text-align:center; }
+  #screen-quiz select, #screen-quiz .setup button{ padding:8px; font-size:16px; border-radius:6px; }
+
+  /* ================= TABLES APP (scoped) ================= */
+  #screen-tables{ background:#f2f9ff; color:#222; }
+  #screen-tables .app-topbar{ background:#dceeff; }
+  #screen-tables h1{ color:#2b547e; text-align:center; }
+  #screen-tables .card{
+    background:white; max-width:400px; margin:20px auto; padding:20px;
+    border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.1); text-align:center;
+  }
+  #screen-tables select, #screen-tables input, #screen-tables .card button{
+    width:90%; padding:10px; margin:8px 0; font-size:16px;
+  }
+  #screen-tables .card button{
+    background:#4CAF50; color:white; border:none; border-radius:6px; cursor:pointer;
+  }
+  #screen-tables .card button:hover{ background:#45a049; }
+  #screen-tables .question{ font-size:22px; margin:15px 0; }
+  #screen-tables .result{ font-size:18px; margin-top:10px; }
+  #screen-tables .correct{ color:green; }
+  #screen-tables .wrong{ color:red; }
+  #screen-tables .score{ margin-top:15px; font-weight:bold; }
+
+  /* ================= FACTORS APP (scoped) ================= */
+  #screen-factors{ background:#eef2ff; color:#334155; }
+  #screen-factors .bouncy{ transition: transform 0.2s; }
+  #screen-factors .bouncy:hover{ transform: scale(1.05); }
+
+  /* ================= PUZZLES APP (scoped) ================= */
+  #screen-puzzles{ background:#fff7ed; color:#3a2c1a; }
+  #screen-puzzles .app-topbar{ background:#fce9d2; }
+  #screen-puzzles h1{ text-align:center; color:#8a4b12; }
+  #screen-puzzles .card{
+    background:white; max-width:480px; margin:20px auto; padding:24px;
+    border-radius:16px; box-shadow:0 4px 10px rgba(0,0,0,0.08); text-align:center;
+  }
+  #screen-puzzles .puzzle-text{ font-size:20px; margin:16px 0; min-height:60px; }
+  #screen-puzzles .row{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin:10px 0; }
+  #screen-puzzles button{
+    border:none; border-radius:10px; padding:12px 18px; font-size:16px;
+    font-weight:700; cursor:pointer; color:white;
+  }
+  #screen-puzzles .btn-listen{ background:#8a4b12; }
+  #screen-puzzles .btn-mic{ background:#d97706; }
+  #screen-puzzles .btn-mic.listening{ background:#dc2626; }
+  #screen-puzzles .btn-submit{ background:#16a34a; }
+  #screen-puzzles input[type=text]{
+    padding:10px; font-size:16px; border-radius:8px; border:1px solid #ddd;
+    width:80%; max-width:320px; text-align:center;
+  }
+  #screen-puzzles .result{ font-size:18px; margin-top:12px; font-weight:700; }
+  #screen-puzzles .score{ margin-top:16px; font-weight:800; }
+  #screen-puzzles .hint{ font-size:13px; color:#8a7660; margin-top:10px; }
+</style>
+</head>
+<body x-data="{ }">
+
+<!-- ============================================================ -->
+<!-- HOME SCREEN -->
+<!-- ============================================================ -->
+<div id="screen-home" class="screen active">
+  <div id="home-header">
+    <h1 class="chalk-font">📐 Math Panel</h1>
+    <p>Tap an app to begin</p>
+  </div>
+  <div class="tile-grid">
+    <div class="tile t-quiz" onclick="showScreen('screen-quiz')">
+      <div class="tile-icon">🧮</div>
+      <div class="tile-title chalk-font">Math Quiz</div>
+      <div class="tile-desc">Class-wise timed quiz, Classes 1–10</div>
+    </div>
+    <div class="tile t-tables" onclick="showScreen('screen-tables')">
+      <div class="tile-icon">📘</div>
+      <div class="tile-title chalk-font">Tables Trainer</div>
+      <div class="tile-desc">Practise multiplication tables 2–20</div>
+    </div>
+    <div class="tile t-factors" onclick="showScreen('screen-factors')">
+      <div class="tile-icon">🧩</div>
+      <div class="tile-title chalk-font">Factor Fun</div>
+      <div class="tile-desc">Learn, visualise and quiz on factors, Grades 3–5</div>
+    </div>
+    <div class="tile t-puzzles" onclick="showScreen('screen-puzzles')">
+      <div class="tile-icon">🎤</div>
+      <div class="tile-title chalk-font">Math Puzzles</div>
+      <div class="tile-desc">Voice or typed answers to riddle puzzles</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- APP 1: MATH QUIZ -->
+<!-- ============================================================ -->
+<div id="screen-quiz" class="screen">
+  <div class="app-topbar">
+    <button class="back-btn" onclick="showScreen('screen-home')">⬅ Home</button>
+    <span class="app-name">Math Quiz</span>
+  </div>
+  <div style="padding:10px 16px 40px;">
+    <h1>Math Quiz</h1>
+
+    <div class="setup" id="quiz-setup">
+      <label for="quiz-classSelect"><b>Select Class:</b></label><br>
+      <select id="quiz-classSelect">
+        <option value="1">Class 1</option>
+        <option value="2">Class 2</option>
+        <option value="3">Class 3</option>
+        <option value="4">Class 4</option>
+        <option value="5">Class 5</option>
+        <option value="6">Class 6</option>
+        <option value="7">Class 7</option>
+        <option value="8">Class 8</option>
+        <option value="9">Class 9</option>
+        <option value="10">Class 10</option>
+      </select><br>
+      <button onclick="quizStart()">Start Quiz</button>
+    </div>
+
+    <div class="question" id="quiz-question"></div>
+    <div class="choices" id="quiz-choices"></div>
+    <div class="result" id="quiz-result"></div>
+    <div class="score" id="quiz-score"></div>
+    <div class="counter" id="quiz-counter"></div>
+    <div class="end-message" id="quiz-endMessage"></div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- APP 2: TABLES TRAINER -->
+<!-- ============================================================ -->
+<div id="screen-tables" class="screen">
+  <div class="app-topbar">
+    <button class="back-btn" onclick="showScreen('screen-home')">⬅ Home</button>
+    <span class="app-name">Tables Trainer</span>
+  </div>
+  <div style="padding:10px 16px 40px;">
+    <h1>📘 Tables Trainer</h1>
+    <p style="text-align:center;">Class 3 Mathematics</p>
+
+    <div class="card">
+      <label>Select Table</label><br>
+      <select id="tables-tableNumber"></select>
+
+      <div class="question" id="tables-question">Click Start</div>
+
+      <input type="number" id="tables-answer" placeholder="Enter your answer">
+
+      <button onclick="tablesCheckAnswer()">Submit</button>
+      <button onclick="tablesStart()">Start / Next</button>
+
+      <div class="result" id="tables-result"></div>
+      <div class="score" id="tables-score">Score: 0</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- APP 3: FACTOR FUN -->
+<!-- ============================================================ -->
+<div id="screen-factors" class="screen">
+  <div class="app-topbar" style="background:#e0e7ff;">
+    <button class="back-btn" onclick="showScreen('screen-home')">⬅ Home</button>
+    <span class="app-name" style="color:#334155;">Factor Fun</span>
+  </div>
+
+  <div x-data="factorsApp()" class="min-h-screen text-slate-700 pb-12" style="font-family:'Poppins',sans-serif;">
+    <header class="bg-white shadow-md sticky z-30" style="top:57px;">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <span class="text-3xl">⭐</span>
+                <h1 class="text-xl md:text-2xl font-extrabold text-indigo-600">MathQuest: Factor Fun!</h1>
+            </div>
+            <div class="flex items-center space-x-3 bg-amber-100 px-4 py-1.5 rounded-full border border-amber-300">
+                <span class="text-xl">🏆</span>
+                <span class="font-bold text-amber-800" x-text="score + ' Stars'"></span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 mt-6">
+        <div class="flex justify-center space-x-2 md:space-x-4 mb-8 overflow-x-auto py-2">
+            <button @click="currentTab = 'learn'"
+                :class="currentTab === 'learn' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-indigo-600 hover:bg-indigo-100'"
+                class="px-5 py-2.5 rounded-2xl font-bold transition duration-200 whitespace-nowrap">
+                📚 1. Learn Factors
+            </button>
+            <button @click="currentTab = 'visualizer'"
+                :class="currentTab === 'visualizer' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-indigo-600 hover:bg-indigo-100'"
+                class="px-5 py-2.5 rounded-2xl font-bold transition duration-200 whitespace-nowrap">
+                🧩 2. Visual Builder
+            </button>
+            <button @click="currentTab = 'quiz'"
+                :class="currentTab === 'quiz' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-indigo-600 hover:bg-indigo-100'"
+                class="px-5 py-2.5 rounded-2xl font-bold transition duration-200 whitespace-nowrap">
+                🎮 3. Quiz & Test
+            </button>
+        </div>
+
+        <div x-show="currentTab === 'learn'" class="space-y-6">
+            <div class="bg-white rounded-3xl p-6 md:p-8 shadow-xl border-4 border-indigo-100">
+                <span class="bg-indigo-100 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">CBSE Grade 4 & 5 Concept</span>
+                <h2 class="text-2xl md:text-3xl font-extrabold text-indigo-900 mt-2 mb-4">What is a Factor? 🕵️‍♂️</h2>
+                <p class="text-lg text-slate-600 mb-4 leading-relaxed">
+                    A factor is a number that divides evenly into another number without leaving any remainder.
+                    Think of factors as the building blocks or multiplication partners that make up a number!
+                </p>
+
+                <div class="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-xl mb-6">
+                    <p class="font-semibold text-amber-900">💡 Golden Rule:</p>
+                    <p class="text-amber-800">1 is a factor of every number, and every number is a factor of itself!</p>
+                </div>
+
+                <h3 class="text-xl font-bold text-indigo-800 mb-3">Example: Let's find factors of 12! 🍫</h3>
+                <p class="text-slate-600 mb-4">How can we arrange 12 chocolate blocks into equal rows?</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-200 text-center">
+                        <p class="font-bold text-indigo-700">1 row of 12</p>
+                        <p class="text-sm text-slate-500 my-1">1 × 12 = 12</p>
+                        <div class="text-indigo-600 font-extrabold text-lg">Factors: 1 & 12</div>
+                    </div>
+                    <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-200 text-center">
+                        <p class="font-bold text-indigo-700">2 rows of 6</p>
+                        <p class="text-sm text-slate-500 my-1">2 × 6 = 12</p>
+                        <div class="text-indigo-600 font-extrabold text-lg">Factors: 2 & 6</div>
+                    </div>
+                    <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-200 text-center">
+                        <p class="font-bold text-indigo-700">3 rows of 4</p>
+                        <p class="text-sm text-slate-500 my-1">3 × 4 = 12</p>
+                        <div class="text-indigo-600 font-extrabold text-lg">Factors: 3 & 4</div>
+                    </div>
+                </div>
+
+                <div class="mt-6 bg-green-50 p-4 rounded-2xl border border-green-200 text-center">
+                    <p class="text-green-800 font-bold text-lg">All Factors of 12 (in order):</p>
+                    <p class="text-2xl font-extrabold text-green-600 mt-1">1, 2, 3, 4, 6, 12</p>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="currentTab === 'visualizer'" class="space-y-6">
+            <div class="bg-white rounded-3xl p-6 md:p-8 shadow-xl border-4 border-indigo-100 text-center">
+                <h2 class="text-2xl md:text-3xl font-extrabold text-indigo-900 mb-2">Factor Visualizer 🎨</h2>
+                <p class="text-slate-600 mb-6">Select a number between 1 and 20 to see its items organized into equal groups!</p>
+
+                <div class="flex flex-wrap justify-center gap-2 mb-8">
+                    <template x-for="n in 20">
+                        <button @click="selectedNum = n"
+                            :class="selectedNum === n ? 'bg-indigo-600 text-white scale-110 shadow-md' : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'"
+                            class="w-10 h-10 rounded-xl font-bold transition duration-150"
+                            x-text="n">
+                        </button>
+                    </template>
+                </div>
+
+                <div class="bg-indigo-50 rounded-2xl p-6 border border-indigo-200">
+                    <h3 class="text-xl font-bold text-indigo-800 mb-4">
+                        Exploring Number: <span class="text-indigo-600 text-2xl" x-text="selectedNum"></span>
+                    </h3>
+
+                    <div class="flex flex-wrap justify-center gap-2 max-w-md mx-auto mb-6 p-4 bg-white rounded-xl shadow-inner min-h-[100px] items-center">
+                        <template x-for="i in selectedNum">
+                            <div class="w-8 h-8 bg-amber-400 rounded-lg shadow flex items-center justify-center text-white font-bold text-sm bouncy">⭐</div>
+                        </template>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-xl shadow-sm inline-block">
+                        <p class="text-gray-600 font-semibold mb-1">Exact Factors of <span x-text="selectedNum"></span> are:</p>
+                        <p class="text-2xl font-extrabold text-indigo-600" x-text="getFactors(selectedNum).join(', ')"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="currentTab === 'quiz'" class="space-y-6">
+            <div class="bg-white rounded-3xl p-6 md:p-8 shadow-xl border-4 border-indigo-100">
+
+                <template x-if="!quizFinished">
+                    <div>
+                        <div class="flex justify-between items-center mb-6">
+                            <span class="bg-amber-100 text-amber-800 font-bold px-3 py-1 rounded-full text-sm">
+                                Question <span x-text="currentQuestionIndex + 1"></span> of <span x-text="quizQuestions.length"></span>
+                            </span>
+                            <span class="text-indigo-600 font-bold text-sm">CBSE Skill Check</span>
+                        </div>
+
+                        <h3 class="text-xl md:text-2xl font-extrabold text-indigo-900 mb-6" x-text="quizQuestions[currentQuestionIndex].question"></h3>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <template x-for="(option, index) in quizQuestions[currentQuestionIndex].options">
+                                <button @click="selectOption(index)"
+                                    :class="{
+                                        'bg-indigo-50 border-indigo-200 text-indigo-800 hover:bg-indigo-100': selectedOption === null && evaluatedOption !== index,
+                                        'bg-green-500 text-white border-green-600 shadow-md': evaluatedOption !== null && index === quizQuestions[currentQuestionIndex].correct,
+                                        'bg-red-500 text-white border-red-600 shadow-md': evaluatedOption !== null && selectedOption === index && index !== quizQuestions[currentQuestionIndex].correct,
+                                        'bg-indigo-100 text-indigo-800': selectedOption === index && evaluatedOption === null
+                                    }"
+                                    class="p-4 rounded-2xl border-2 font-semibold text-left transition duration-150 flex justify-between items-center">
+                                    <span x-text="option"></span>
+                                    <span x-show="evaluatedOption !== null && index === quizQuestions[currentQuestionIndex].correct">✅</span>
+                                    <span x-show="evaluatedOption !== null && selectedOption === index && index !== quizQuestions[currentQuestionIndex].correct">❌</span>
+                                </button>
+                            </template>
+                        </div>
+
+                        <template x-if="evaluatedOption !== null">
+                            <div class="mb-6 p-4 rounded-2xl" :class="isCorrect ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
+                                <p class="font-bold text-lg" x-text="isCorrect ? '🎉 Correct! Excellent job!' : '💡 Not quite right!'"></p>
+                                <p class="text-sm mt-1" x-text="quizQuestions[currentQuestionIndex].explanation"></p>
+                            </div>
+                        </template>
+
+                        <div class="flex justify-end">
+                            <template x-if="evaluatedOption === null">
+                                <button @click="checkAnswer()" :disabled="selectedOption === null"
+                                    :class="selectedOption === null ? 'opacity-50 cursor-not-allowed bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'"
+                                    class="text-white px-6 py-3 rounded-2xl font-bold shadow-md transition duration-150">
+                                    Check Answer 🚀
+                                </button>
+                            </template>
+                            <template x-if="evaluatedOption !== null">
+                                <button @click="nextQuestion()"
+                                    class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-2xl font-bold shadow-md transition duration-150">
+                                    Next Question ➡️
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+
+                <template x-if="quizFinished">
+                    <div class="text-center py-8">
+                        <div class="text-6xl mb-4">🏆</div>
+                        <h3 class="text-3xl font-extrabold text-indigo-900 mb-2">Quiz Completed!</h3>
+                        <p class="text-lg text-slate-600 mb-6">You successfully finished the CBSE Factor Assessment.</p>
+
+                        <div class="bg-indigo-50 p-6 rounded-3xl border border-indigo-200 max-w-xs mx-auto mb-8">
+                            <p class="text-sm text-indigo-700 font-bold uppercase tracking-wider">Your Final Score</p>
+                            <p class="text-4xl font-extrabold text-indigo-600 mt-2">
+                                <span x-text="correctAnswersCount"></span> / <span x-text="quizQuestions.length"></span>
+                            </p>
+                        </div>
+
+                        <button @click="restartQuiz()"
+                            class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3.5 rounded-2xl font-bold shadow-lg transition duration-150">
+                            🔄 Try Again
+                        </button>
+                    </div>
+                </template>
+
+            </div>
+        </div>
+
+    </main>
+    <footer class="text-center mt-12 text-slate-400 text-sm">
+        <p>Aligned with CBSE Mathematics Learning Objectives (Grades 3, 4 & 5)</p>
+    </footer>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- APP 4: MATH PUZZLES (voice or typed) -->
+<!-- ============================================================ -->
+<div id="screen-puzzles" class="screen">
+  <div class="app-topbar">
+    <button class="back-btn" onclick="showScreen('screen-home')">⬅ Home</button>
+    <span class="app-name">Math Puzzles</span>
+  </div>
+  <div style="padding:10px 16px 40px;">
+    <h1>🎤 Math Puzzles</h1>
+    <div class="card">
+      <div class="puzzle-text" id="puz-question">Tap Start to begin</div>
+
+      <div class="row">
+        <button class="btn-listen" onclick="puzSpeak()">🔊 Read Aloud</button>
+        <button class="btn-mic" id="puz-mic-btn" onclick="puzToggleListen()">🎙️ Speak Answer</button>
+      </div>
+
+      <div class="row">
+        <input type="text" id="puz-text-answer" placeholder="Or type your answer">
+        <button class="btn-submit" onclick="puzSubmit()">Submit</button>
+      </div>
+
+      <div class="row">
+        <button onclick="puzStart()" style="background:#334155;">▶ Start / Next</button>
+      </div>
+
+      <div class="result" id="puz-result"></div>
+      <div class="score" id="puz-score">Score: 0</div>
+      <div class="hint" id="puz-hint">Voice input needs Chrome, a microphone and an internet connection. Typing always works.</div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+/* =========================================================
+   SCREEN NAVIGATION
+   ========================================================= */
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+/* =========================================================
+   SHARED MATH HELPERS
+   ========================================================= */
+function rand(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+function randChoice(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function gcdFn(a,b){ return b===0 ? a : gcdFn(b,a%b); }
+function lcmFn(a,b){ return (a*b)/gcdFn(a,b); }
+
+/* =========================================================
+   APP 1: MATH QUIZ  (prefix: quiz)
+   ========================================================= */
+let quizScore = 0, quizCorrectAnswer = 0, quizQuestionCount = 0;
+const quizTotalQuestions = 25;
+let quizSelectedClass = 1;
+
+function quizStart() {
+  quizSelectedClass = parseInt(document.getElementById("quiz-classSelect").value);
+  document.getElementById("quiz-setup").style.display = "none";
+  quizScore = 0; quizQuestionCount = 0;
+  document.getElementById("quiz-score").textContent = "Score: 0";
+  document.getElementById("quiz-counter").textContent = "Question: 0 / " + quizTotalQuestions;
+  document.getElementById("quiz-endMessage").textContent = "";
+  quizGenerateQuestion();
+}
+
+function quizGenerateQuestion() {
+  if (quizQuestionCount >= quizTotalQuestions) { quizEnd(); return; }
+  quizQuestionCount++;
+
+  let qText = "", choices = [], a, b, op, correctAnswer, c;
+  switch (quizSelectedClass) {
+    case 1: case 2:
+      a = rand(1,20); b = rand(1,20); op = randChoice(["+","-"]);
+      correctAnswer = (op === "+") ? a+b : a-b;
+      qText = `${a} ${op} ${b} = ?`;
+      break;
+    case 3:
+      a = rand(2,10); b = rand(2,10); op = randChoice(["*","/"]);
+      correctAnswer = op === "*" ? a*b : a;
+      qText = (op==="*") ? `${a} × ${b} = ?` : `${a*b} ÷ ${b} = ?`;
+      break;
+    case 4: case 5:
+      a = rand(10,50); b = rand(2,12); op = randChoice(["/","%"]);
+      if (op==="/"){ correctAnswer = Math.floor(a/b); qText=`${a} ÷ ${b} = ?`; }
+      else { correctAnswer = a % b; qText=`Remainder when ${a} ÷ ${b} = ?`; }
+      break;
+    case 6:
+      let type = randChoice(["LCM","HCF","Percent"]);
+      if (type==="LCM"){ a=rand(2,10); b=rand(2,10); correctAnswer=lcmFn(a,b); qText=`LCM of ${a} and ${b} = ?`; }
+      else if (type==="HCF"){ a=rand(10,50); b=rand(10,50); correctAnswer=gcdFn(a,b); qText=`HCF of ${a} and ${b} = ?`; }
+      else { a=rand(50,200); b=rand(10,50); correctAnswer=Math.round((b/a)*100); qText=`${b} is what % of ${a}?`; }
+      break;
+    case 7:
+      a=rand(1,10); b=rand(1,20); correctAnswer=b-a; qText=`Solve: x + ${a} = ${b}, find x`; break;
+    case 8:
+      a=rand(2,5); b=rand(1,10); correctAnswer=Math.pow(a,b); qText=`${a}^${b} = ?`; break;
+    case 9:
+      a=rand(1,5); b=rand(1,5); c=rand(1,5); correctAnswer=a*1*1+b*1+c; qText=`If f(x)=${a}x²+${b}x+${c}, find f(1)`; break;
+    case 10:
+      let topic = randChoice(["Quadratic","Trig","Probability"]);
+      if(topic==="Quadratic"){ correctAnswer=-2; qText=`Solve: x² + 4x + 4 = 0 (give one root)`; }
+      else if(topic==="Trig"){ correctAnswer=1; qText=`sin²(30°) + cos²(30°) = ?`; }
+      else { correctAnswer=0.5; qText=`Probability of getting Head in a coin toss = ?`; }
+      break;
+  }
+  quizCorrectAnswer = correctAnswer;
+
+  choices = [correctAnswer];
+  while (choices.length < 3) {
+    let wrong = correctAnswer + rand(-5,5);
+    if (wrong>=0 && !choices.includes(wrong)) choices.push(wrong);
+  }
+  choices.sort(()=>Math.random()-0.5);
+
+  document.getElementById("quiz-question").textContent = `Class ${quizSelectedClass}: ${qText}`;
+  document.getElementById("quiz-counter").textContent = `Question: ${quizQuestionCount} / ${quizTotalQuestions}`;
+  document.getElementById("quiz-result").textContent = "";
+  const choiceDiv=document.getElementById("quiz-choices"); choiceDiv.innerHTML="";
+  choices.forEach(cVal=>{
+    let btn=document.createElement("button");
+    btn.textContent=cVal; btn.onclick=()=>quizCheckAnswer(cVal);
+    choiceDiv.appendChild(btn);
+  });
+}
+
+function quizCheckAnswer(choice){
+  const resultDiv=document.getElementById("quiz-result");
+  if(choice===quizCorrectAnswer){ resultDiv.textContent="✅ Correct!"; resultDiv.style.color="green"; quizScore++; }
+  else { resultDiv.textContent=`❌ Wrong! Correct was ${quizCorrectAnswer}`; resultDiv.style.color="red"; }
+  document.getElementById("quiz-score").textContent="Score: "+quizScore;
+  setTimeout(quizGenerateQuestion,1200);
+}
+
+function quizEnd(){
+  document.getElementById("quiz-question").textContent="";
+  document.getElementById("quiz-choices").innerHTML="";
+  document.getElementById("quiz-result").textContent="";
+  document.getElementById("quiz-endMessage").textContent=`🎉 Quiz Over! You scored ${quizScore} out of ${quizTotalQuestions}.`;
+  document.getElementById("quiz-setup").style.display = "block";
+}
+
+/* =========================================================
+   APP 2: TABLES TRAINER  (prefix: tables)
+   ========================================================= */
+let tablesMultiplier = 1;
+let tablesScore = 0;
+let tablesCorrectAnswer = 0;
+
+function tablesInitOptions(){
+  const sel = document.getElementById("tables-tableNumber");
+  sel.innerHTML = "";
+  for (let i = 2; i <= 20; i++) {
+    const opt = document.createElement("option");
+    opt.value = i;
+    opt.textContent = "Table of " + i;
+    sel.appendChild(opt);
+  }
+}
+
+function tablesStart() {
+  const table = parseInt(document.getElementById("tables-tableNumber").value);
+  tablesMultiplier = rand(1,10);
+  tablesCorrectAnswer = table * tablesMultiplier;
+
+  document.getElementById("tables-question").innerText = table + " × " + tablesMultiplier + " = ?";
+  document.getElementById("tables-answer").value = "";
+  document.getElementById("tables-result").innerText = "";
+}
+
+function tablesCheckAnswer() {
+  const userAnswer = document.getElementById("tables-answer").value;
+  const resultDiv = document.getElementById("tables-result");
+
+  if (userAnswer != "" && parseInt(userAnswer) === tablesCorrectAnswer) {
+    resultDiv.innerHTML = "✅ Correct!";
+    resultDiv.className = "result correct";
+    tablesScore++;
+  } else {
+    resultDiv.innerHTML = "❌ Wrong! Correct answer is " + tablesCorrectAnswer;
+    resultDiv.className = "result wrong";
+  }
+  document.getElementById("tables-score").innerText = "Score: " + tablesScore;
+}
+
+/* =========================================================
+   APP 3: FACTOR FUN  (Alpine component)
+   ========================================================= */
+function factorsApp() {
+  return {
+    currentTab: 'learn',
+    score: 0,
+    selectedNum: 12,
+
+    currentQuestionIndex: 0,
+    selectedOption: null,
+    evaluatedOption: null,
+    isCorrect: false,
+    correctAnswersCount: 0,
+    quizFinished: false,
+
+    quizQuestions: [
+      { question: "Which of the following is a factor of 15?", options: ["2","4","5","7"], correct: 2,
+        explanation: "15 can be divided evenly by 5 (3 × 5 = 15)." },
+      { question: "What is the smallest factor of any given number?", options: ["0","1","The number itself","2"], correct: 1,
+        explanation: "1 is a universal factor because it divides every number evenly." },
+      { question: "Which of these numbers are all the factors of 8?", options: ["1, 2, 4, 8","1, 3, 5, 8","2, 4, 6","1, 8"], correct: 0,
+        explanation: "8 can be formed by 1×8 and 2×4. So the factors are 1, 2, 4, and 8." },
+      { question: "Is 6 a factor of 24?", options: ["Yes","No"], correct: 0,
+        explanation: "Yes! Because 6 × 4 = 24 with no remainder." },
+      { question: "Every number is a factor of...", options: ["Zero","Itself","One","Ten"], correct: 1,
+        explanation: "Every non-zero number is a factor of itself (e.g., 5 × 1 = 5)." }
+    ],
+
+    getFactors(num) {
+      let factors = [];
+      for (let i = 1; i <= num; i++) { if (num % i === 0) factors.push(i); }
+      return factors;
+    },
+    selectOption(index) { if (this.evaluatedOption === null) this.selectedOption = index; },
+    checkAnswer() {
+      if (this.selectedOption === null) return;
+      this.evaluatedOption = this.selectedOption;
+      this.isCorrect = (this.evaluatedOption === this.quizQuestions[this.currentQuestionIndex].correct);
+      if (this.isCorrect) { this.score += 10; this.correctAnswersCount++; }
+    },
+    nextQuestion() {
+      this.selectedOption = null; this.evaluatedOption = null; this.isCorrect = false;
+      if (this.currentQuestionIndex < this.quizQuestions.length - 1) this.currentQuestionIndex++;
+      else this.quizFinished = true;
+    },
+    restartQuiz() {
+      this.currentQuestionIndex = 0; this.selectedOption = null; this.evaluatedOption = null;
+      this.isCorrect = false; this.correctAnswersCount = 0; this.quizFinished = false;
+    }
+  }
+}
+
+/* =========================================================
+   APP 4: MATH PUZZLES  (prefix: puz)
+   Voice via Web Speech API, with typed-answer fallback.
+   Edit puzData below to add your own puzzles / swap in a
+   set exported from your Excel sheet.
+   ========================================================= */
+const puzData = [
+  { q: "I am the only even prime number. What number am I?", a: ["2","two"] },
+  { q: "I have 3 equal sides and 3 equal angles. What shape am I?", a: ["triangle","equilateral triangle"] },
+  { q: "My tens digit is 3 and my ones digit is 5. What number am I?", a: ["35","thirty five","thirty-five"] },
+  { q: "Half of me is 12. What number am I?", a: ["24","twenty four","twenty-four"] },
+  { q: "I am the smallest 3-digit number. What number am I?", a: ["100","hundred","one hundred"] },
+  { q: "If you multiply me by 5, you get 45. What number am I?", a: ["9","nine"] },
+  { q: "I am an odd number between 20 and 30. My digits add up to 7. What number am I?", a: ["25","twenty five","twenty-five"] },
+  { q: "I have 4 equal sides and 4 right angles. What shape am I?", a: ["square"] },
+  { q: "I am double of 15 and half of 60. What number am I?", a: ["30","thirty"] },
+  { q: "There are 60 minutes in an hour. How many minutes are in 2 hours?", a: ["120","one hundred twenty","one hundred and twenty"] },
+  { q: "What is the sum of 8 and 9?", a: ["17","seventeen"] },
+  { q: "If a week has 7 days, how many days are in 3 weeks?", a: ["21","twenty one","twenty-one"] },
+  { q: "A triangle has how many sides?", a: ["3","three"] },
+  { q: "What is half of 100?", a: ["50","fifty"] }
+];
+
+let puzIndex = -1;
+let puzScore = 0;
+let puzOrder = [];
+let puzRecognition = null;
+let puzListening = false;
+
+function puzShuffle() {
+  puzOrder = puzData.map((_,i)=>i);
+  for (let i = puzOrder.length -1; i>0; i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [puzOrder[i], puzOrder[j]] = [puzOrder[j], puzOrder[i]];
+  }
+}
+
+function puzStart() {
+  if (puzOrder.length === 0 || puzIndex >= puzOrder.length - 1) {
+    puzShuffle();
+    puzIndex = -1;
+    puzScore = 0;
+    document.getElementById("puz-score").textContent = "Score: 0";
+  }
+  puzIndex++;
+  if (puzIndex >= puzOrder.length) { puzIndex = 0; }
+  const item = puzData[puzOrder[puzIndex]];
+  document.getElementById("puz-question").textContent = `Puzzle ${puzIndex+1} of ${puzOrder.length}: ${item.q}`;
+  document.getElementById("puz-result").textContent = "";
+  document.getElementById("puz-text-answer").value = "";
+}
+
+function puzSpeak() {
+  const item = puzData[puzOrder[puzIndex]];
+  if (!item) return;
+  if ('speechSynthesis' in window) {
+    const utter = new SpeechSynthesisUtterance(item.q);
+    utter.lang = 'en-IN';
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utter);
+  } else {
+    document.getElementById("puz-hint").textContent = "This browser can't read text aloud. Please read the puzzle on screen.";
+  }
+}
+
+function puzToggleListen() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    document.getElementById("puz-hint").textContent = "Voice input isn't supported on this browser. Please type your answer instead.";
+    return;
+  }
+  const micBtn = document.getElementById("puz-mic-btn");
+
+  if (puzListening) {
+    puzRecognition && puzRecognition.stop();
+    return;
+  }
+
+  puzRecognition = new SpeechRecognition();
+  puzRecognition.lang = 'en-IN';
+  puzRecognition.interimResults = false;
+  puzRecognition.maxAlternatives = 1;
+
+  puzRecognition.onstart = () => { puzListening = true; micBtn.classList.add('listening'); micBtn.textContent = "🎙️ Listening..."; };
+  puzRecognition.onend = () => { puzListening = false; micBtn.classList.remove('listening'); micBtn.textContent = "🎙️ Speak Answer"; };
+  puzRecognition.onerror = () => { puzListening = false; micBtn.classList.remove('listening'); micBtn.textContent = "🎙️ Speak Answer"; };
+  puzRecognition.onresult = (event) => {
+    const said = event.results[0][0].transcript;
+    document.getElementById("puz-text-answer").value = said;
+    puzSubmit();
+  };
+  puzRecognition.start();
+}
+
+function puzSubmit() {
+  const item = puzData[puzOrder[puzIndex]];
+  if (!item) return;
+  const given = document.getElementById("puz-text-answer").value.trim().toLowerCase();
+  const resultDiv = document.getElementById("puz-result");
+  if (!given) { resultDiv.textContent = "Type or speak an answer first."; resultDiv.style.color = "#8a4b12"; return; }
+
+  const isRight = item.a.some(ans => given.includes(ans));
+  if (isRight) {
+    resultDiv.textContent = "✅ Correct!";
+    resultDiv.style.color = "green";
+    puzScore++;
+  } else {
+    resultDiv.textContent = `❌ Not quite. One correct answer: ${item.a[0]}`;
+    resultDiv.style.color = "red";
+  }
+  document.getElementById("puz-score").textContent = "Score: " + puzScore;
+}
+
+/* =========================================================
+   INIT
+   ========================================================= */
+document.addEventListener("DOMContentLoaded", function(){
+  tablesInitOptions();
+  puzShuffle();
+});
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
+</script>
+</body>
+</html>
